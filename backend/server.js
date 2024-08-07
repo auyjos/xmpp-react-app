@@ -2,12 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const bodyParser = require('body-parser');
-const xmpp = require('./xmpp_client');
+const xmpp = require('./xmpp_client'); // Asegúrate de que este archivo sea correcto
 const socketIo = require('socket.io');
 const app = express();
 const PORT = 3000;
-
-
 
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -34,10 +32,9 @@ xmpp.on('chat', (from, message) => {
 
 xmpp.on('subscribe', from => {
     console.log(`Subscription request from ${from}`);
-    if (from === 'a.friend@gmail.com') {
-        xmpp.acceptSubscription(from);
-    }
+    xmpp.acceptSubscription(from);
 });
+
 
 // Endpoints
 app.post('/login', (req, res) => {
@@ -73,7 +70,6 @@ app.post('/login', (req, res) => {
         disallowSSL: true
     });
     xmpp.setPresence('online', 'online');
-    xmpp.setChatstate('auy@alumchat.lol', 'online');
 });
 
 app.post('/logout', (req, res) => {
@@ -97,6 +93,59 @@ app.post('/send-message', (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+// Endpoint para actualizar la presencia
+app.post('/set-presence', (req, res) => {
+    const { show, status } = req.body;
+
+    if (!show) {
+        return res.status(400).json({ error: 'Missing "show" field' });
+    }
+
+    try {
+        xmpp.setPresence(show, status);
+        res.status(200).json({ message: 'Presence updated' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update presence', details: error.message });
+    }
+});
+
+// Endpoint for friend request
+app.post('/friend-request', (req, res) => {
+    const { to } = req.body;
+
+    if (!to) {
+        return res.status(400).json({ error: 'Missing "to" field' });
+    }
+
+    try {
+        console.log(`Sending friend request to ${to}`);
+        xmpp.subscribe(to);
+        res.status(200).json({ message: 'Friend request sent' });
+    } catch (error) {
+        console.error('Failed to send friend request:', error);
+        res.status(500).json({ error: 'Failed to send friend request', details: error.message });
+    }
+});
+
+// Endpoint for accepting a friend request
+app.post('/accept-friend-request', (req, res) => {
+    const { from } = req.body;
+
+    if (!from) {
+        return res.status(400).json({ error: 'Missing "from" field' });
+    }
+
+    try {
+        console.log(`Accepting friend request from ${from}`);
+        xmpp.acceptSubscription(from);
+        res.status(200).json({ message: 'Friend request accepted' });
+    } catch (error) {
+        console.error('Failed to accept friend request:', error);
+        res.status(500).json({ error: 'Failed to accept friend request', details: error.message });
+    }
+});
+
+
+server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
