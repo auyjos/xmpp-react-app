@@ -11,11 +11,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@socket.io/cluster-adapter": "^0.2.2",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "node-xmpp-client": "^3.2.0"
   },
   "devDependencies": {
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "socket.io-adapter": "^2.5.5"
   }
 }

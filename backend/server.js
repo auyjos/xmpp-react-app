@@ -1,3 +1,5 @@
+
+const clu = require('@socket.io/cluster-adapter')
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -8,10 +10,19 @@ const app = express();
 const PORT = 3000;
 
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new socketIo.Server(server, {
+    connectionStateRecovery: {},
+    socketIo: clu.createAdapter(),
+    cors: {
+        origin: "*", //specific origin you want to give access to,
+    },
+});
+
+
 
 app.use(bodyParser.json());
 app.use(cors());
+app.options('*', cors());
 app.use(express.static('public'));
 
 // XMPP event handlers
@@ -24,15 +35,25 @@ xmpp.on('error', err => {
     console.error(err);
 });
 
-xmpp.on('chat', (from, message) => {
-    console.log(`Message from ${from}: ${message}`);
-    io.emit('message', { from, message });
-    console.log('Event emitted: message', { from, message });
-});
+
 
 xmpp.on('subscribe', from => {
     console.log(`Subscription request from ${from}`);
     xmpp.acceptSubscription(from);
+});
+
+io.on('connection', async (socket) => {
+    socket.on('chat', async (msg, clientOffset, callback) => {
+        console.log(msg)
+        console.log(clientOffset)
+        xmpp.send('auco@alumchat.lol', msg);
+    });
+    xmpp.on('chat', (from, message) => {
+        console.log(`Message from ${from}: ${message}`);
+
+        io.emit('chat', { from, message });
+        console.log('Event emitted: message', { from, message });
+    });
 });
 
 
