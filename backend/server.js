@@ -36,7 +36,6 @@ xmpp.on('error', err => {
 });
 
 
-
 xmpp.on('subscribe', from => {
     console.log(`Subscription request from ${from}`);
     xmpp.acceptSubscription(from);
@@ -46,7 +45,7 @@ io.on('connection', async (socket) => {
     socket.on('chat', async (msg, clientOffset, callback) => {
         console.log(msg)
         console.log(clientOffset)
-        xmpp.send('auco@alumchat.lol', msg);
+        xmpp.send('auco123@alumchat.lol', msg);
     });
     xmpp.on('chat', (from, message) => {
         console.log(`Message from ${from}: ${message}`);
@@ -97,6 +96,40 @@ app.post('/logout', (req, res) => {
     xmpp.disconnect();
     res.json({ message: 'Logout successful!' });
 });
+
+app.post('/register', (req, res) => {
+    const { server, username, password } = req.body;
+
+    xmpp.register(server, username, password, (err, result) => {
+        if (err) {
+            return res.status(500).json({ message: err });
+        }
+        res.status(200).json({ message: result });
+    });
+});
+
+app.post('/delete-account', (req, res) => {
+    const { username, password } = req.body;
+
+    // Conectar con el servidor utilizando las credenciales proporcionadas
+    xmpp.connect({ jid: username, password, host: 'alumchat.lol', port: 5222 }, (err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Failed to connect for account deletion' });
+        }
+
+        // Llamar a la función para eliminar la cuenta
+        xmpp.deleteAccount('alumchat.lol', (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: err });
+            }
+            res.status(200).json({ message: result });
+            xmpp.disconnect();
+        });
+    });
+});
+
+
+
 
 // Endpoint para enviar un mensaje
 app.post('/send-message', (req, res) => {

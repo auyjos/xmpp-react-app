@@ -1,5 +1,4 @@
 
-
 var xmpp = require('node-xmpp-client');
 var Stanza = xmpp.Stanza; // http://node-xmpp.org/doc/ltx.html
 var EventEmitter = require('events').EventEmitter;
@@ -45,6 +44,54 @@ function XmppClient() {
         stanza.c('body').t(message);
         conn.send(stanza);
     };
+
+    this.register = function (server, username, password, callback) {
+        // Crear la stanza para registro
+        var stanza = new Stanza('iq', { to: server, type: 'set' })
+            .c('query', { xmlns: 'jabber:iq:register' })
+            .c('username').t(username).up()
+            .c('password').t(password);
+
+        // Enviar la stanza
+        conn.send(stanza);
+
+        // Escuchar la respuesta del servidor
+        events.once('stanza', function (response) {
+            if (response.attrs.type === 'result') {
+                callback(null, "Registration successful");
+            } else {
+                const error = response.getChild('error');
+                callback("Registration failed: " + (error ? error.getChildText('text') : "Unknown error"), null);
+            }
+        });
+    };
+
+    this.deleteAccount = function (server, username, password, callback) {
+        // Primero, asegúrate de que la conexión esté autenticada
+        if (!conn.isAuthenticated()) {
+            return callback("Not authenticated", null);
+        }
+
+        // Crear la stanza para eliminar la cuenta
+        var stanza = new Stanza('iq', { to: server, type: 'set' })
+            .c('query', { xmlns: 'jabber:iq:register' })
+            .c('remove');
+
+        // Enviar la stanza
+        conn.send(stanza);
+
+        // Escuchar la respuesta del servidor
+        events.once('stanza', function (response) {
+            if (response.attrs.type === 'result') {
+                callback(null, "Account deleted successfully");
+            } else {
+                const error = response.getChild('error');
+                const errorMessage = error ? error.getChildText('text') : "Unknown error";
+                callback("Account deletion failed: " + errorMessage, null);
+            }
+        });
+    };
+
 
     this.join = function (to, password) {
 
