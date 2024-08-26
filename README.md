@@ -128,8 +128,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-If you have any questions or suggestions, feel free to reach out to [yourname@domain.com].
+If you have any questions or suggestions, feel free to reach out to [josea13p@gmail.com].
 
 ---
-
-Este README ofrece una visión general de tu proyecto, incluyendo características, tecnología, instalación, uso, estructura del proyecto, problemas conocidos y posibles mejoras futuras. Puedes ajustar los detalles según tus necesidades específicas.
