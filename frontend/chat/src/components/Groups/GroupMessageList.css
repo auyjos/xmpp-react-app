@@ -1,0 +1,19 @@
+.my-message {
+    background-color: #d1e7dd;
+    text-align: right;
+}
+
+.other-message {
+    background-color: #f8d7da;
+    text-align: left;
+}
+
+.message-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.message-text {
+    font-size: 1rem;
+}

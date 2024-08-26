@@ -1,5 +1,9 @@
-
+const fs = require('fs');
+const path = require('path');
+const mime = require('mime');
 var xmpp = require('node-xmpp-client');
+
+
 var Stanza = xmpp.Stanza; // http://node-xmpp.org/doc/ltx.html
 var EventEmitter = require('events').EventEmitter;
 var STATUS = {
@@ -14,6 +18,10 @@ var NS_CHATSTATES = "http://jabber.org/protocol/chatstates";
 
 module.exports = new XmppClient();
 
+function readFileAsBase64(filePath) {
+    const fileContent = fs.readFileSync(filePath);
+    return fileContent.toString('base64');
+}
 function XmppClient() {
 
     //setting status here
@@ -57,10 +65,12 @@ function XmppClient() {
 
         // Escuchar la respuesta del servidor
         events.once('stanza', function (response) {
+            console.log(response)
             if (response.attrs.type === 'result') {
                 callback(null, "Registration successful");
             } else {
                 const error = response.getChild('error');
+                console.log(error)
                 callback("Registration failed: " + (error ? error.getChildText('text') : "Unknown error"), null);
             }
         });
@@ -68,20 +78,27 @@ function XmppClient() {
 
     this.deleteAccount = function (server, username, password, callback) {
         // Primero, asegúrate de que la conexión esté autenticada
-        if (!conn.isAuthenticated()) {
-            return callback("Not authenticated", null);
-        }
+        console.log(server, username, password)
+        // if (!conn.isAuthenticated()) {
+        //     return callback("Not authenticated", null);
+        // }
 
         // Crear la stanza para eliminar la cuenta
-        var stanza = new Stanza('iq', { to: server, type: 'set' })
-            .c('query', { xmlns: 'jabber:iq:register' })
-            .c('remove');
+        try {
+            var stanza = new Stanza('iq', { to: server, type: 'set' })
+                .c('query', { xmlns: 'jabber:iq:register' })
+                .c('remove').t(true);
 
-        // Enviar la stanza
-        conn.send(stanza);
+            // Enviar la stanza
+            conn.send(stanza);
+        } catch (e) {
+            console.log(e)
+        }
+
 
         // Escuchar la respuesta del servidor
         events.once('stanza', function (response) {
+            console.log(response)
             if (response.attrs.type === 'result') {
                 callback(null, "Account deleted successfully");
             } else {
@@ -210,6 +227,29 @@ function XmppClient() {
         conn.send(stanza);
     }
 
+    this.getRoster = function (callback) {
+        var stanza = new Stanza('iq', { id: 'roster_0', type: 'get' })
+            .c('query', { xmlns: 'jabber:iq:roster' });
+        conn.send(stanza);
+
+        events.once('stanza', function (response) {
+            if (response.attrs.type === 'result') {
+                const roster = response.getChild('query', 'jabber:iq:roster');
+                const items = roster.getChildren('item');
+                const contacts = items.map(item => ({
+                    jid: item.attrs.jid,
+                    name: item.attrs.name || 'Unknown',
+                    subscription: item.attrs.subscription
+                }));
+                callback(null, contacts);
+            } else {
+                const error = response.getChild('error');
+                callback(error ? error.getChildText('text') : 'Unknown error');
+            }
+        });
+    };
+
+
     // Method: setPresence
     //
     // Change presence appearance and set status message.
@@ -272,16 +312,20 @@ function XmppClient() {
         stanza.c('status').t('Logged out');
         conn.send(stanza);
 
-        var ref = this.conn.connection;
-        if (ref.socket.writable) {
-            if (ref.streamOpened) {
-                ref.socket.write('</stream:stream>');
-                delete ref.streamOpened;
-            } else {
-                ref.socket.end();
+        var socket = this.conn.connection.socket;
+        if (socket) {
+            if (socket.writable) {
+                if (this.conn.streamOpened) {
+                    socket.write('</stream:stream>');
+                    this.conn.streamOpened = false;
+                } else {
+                    socket.end();
+                }
             }
         }
     };
+
+
 
 
     this.connect = function (params) {
@@ -466,6 +510,42 @@ function XmppClient() {
         });
 
     };
+
+
+
+    this.sendFileBase64 = function (to, filePath, callback) {
+        // Read and encode the file
+        try {
+            const fileContent = fs.readFileSync(filePath);
+            const fileBase64 = fileContent.toString('base64');
+            const fileName = path.basename(filePath);
+            const fileMimeType = mime.getType(filePath) || 'application/octet-stream';
+
+            // Create a message stanza with file content
+            const stanza = new Stanza('message', { to: to, type: 'chat' })
+                .c('body').t('Sending file: ' + fileName)
+                .up()
+                .c('file', { xmlns: 'urn:xmpp:files', name: fileName, type: fileMimeType })
+                .t(fileBase64);
+
+            // Send the stanza
+            this.conn.send(stanza);
+
+            if (callback) {
+                callback(null, 'File sent successfully');
+            }
+        } catch (error) {
+            console.error('Error sending file:', error);
+            if (callback) {
+                callback(error, null);
+            }
+        }
+    };
+
+
+
+
+
 
 }
 

@@ -1,0 +1,47 @@
+.friend-status-container {
+    display: flex;
+    align-items: center;
+}
+
+.friend-avatar {
+    background-color: #007bff;
+    /* Color de fondo para el avatar */
+    color: #fff;
+    /* Color del texto del avatar */
+    font-size: 18px;
+    /* Tamaño del texto en el avatar */
+    width: 40px;
+    /* Ancho del avatar */
+    height: 40px;
+    /* Alto del avatar */
+    border-radius: 50%;
+    /* Hacer el avatar redondo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    /* Hacer la letra más destacada */
+}
+
+.status-info {
+    display: flex;
+    align-items: center;
+}
+
+.status-icon {
+    width: 24px;
+    /* Tamaño del ícono de estado */
+    height: 24px;
+    /* Tamaño del ícono de estado */
+    border-radius: 50%;
+    /* Hacer el ícono redondo */
+    background-color: #432bcd;
+    /* Color de fondo del ícono */
+    padding: 4px;
+    /* Espaciado interno */
+}
+
+.status-text {
+    font-size: 14px;
+    /* Tamaño del texto del estado */
+}

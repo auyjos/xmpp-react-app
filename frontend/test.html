@@ -31,28 +31,42 @@
             border-bottom: 1px solid #ccc;
         }
         #messages > li {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 10px;
-            max-width: 60%;
-        }
-        #messages > li.sent {
-            background-color: #d1e7dd;
-            align-self: flex-end;
-            text-align: right;
-        }
-        #messages > li.received {
-            background-color: #f8d7da;
-            align-self: flex-start;
-            text-align: left;
-        }
-        #form {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    max-width: 60%;
+}
+
+#messages > li.sent {
+    background-color: #d1e7dd;
+    align-self: flex-end;
+    text-align: right;
+}
+
+#messages > li.received {
+    background-color: #f8d7da;
+    align-self: flex-start;
+    text-align: left;
+}
+
+#messages > li.presence-update {
+    color: #007bff;
+    font-style: italic;
+}
+
+#messages > li.chatstate-update {
+    color: #28a745;
+    font-style: italic;
+    order: -1; /* Mueve los mensajes de chatstate a la parte superior */
+}
+
+        #form, #probe-form {
             display: flex;
             padding: 10px;
             background-color: #333;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
-        #input {
+        #input, #probe-input {
             flex-grow: 1;
             padding: 10px;
             border: none;
@@ -60,10 +74,10 @@
             margin-right: 10px;
             font-size: 16px;
         }
-        #input:focus {
+        #input:focus, #probe-input:focus {
             outline: none;
         }
-        #form > button {
+        #form > button, #probe-form > button {
             padding: 10px 20px;
             border: none;
             border-radius: 20px;
@@ -72,18 +86,23 @@
             font-size: 16px;
             cursor: pointer;
         }
-        #form > button:hover {
+        #form > button:hover, #probe-form > button:hover {
             background-color: #0056b3;
         }
-    </style>
+        </style>
     </head>
     <body>
         <div id="chat-container">
             <ul id="messages"></ul>
             <form id="form">
                 <input id="input" autocomplete="off"
-                    placeholder="Type a message..." /><button
-                    type="submit">Send</button>
+                    placeholder="Type a message..." />
+                <button type="submit">Send</button>
+            </form>
+            <form id="probe-form">
+                <input id="probe-input" autocomplete="off"
+                    placeholder="Enter JID to probe..." />
+                <button type="submit">Probe</button>
             </form>
         </div>
         <script
@@ -92,20 +111,51 @@
         const socket = io('http://127.0.0.1:3000');
 
         const form = document.getElementById('form');
+        const probeForm = document.getElementById('probe-form');
         const input = document.getElementById('input');
+        const probeInput = document.getElementById('probe-input');
         const messages = document.getElementById('messages');
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value) {
-                socket.emit('chat', input.value);
+                socket.emit('socket-send', input.value);
                 addMessage(input.value, 'sent');
                 input.value = '';
             }
         });
 
-        socket.on('chat', (msg) => {
-            addMessage(msg.message, 'received', msg.from);
+        probeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (probeInput.value) {
+                socket.emit('probe', probeInput.value, (response) => {
+                    if (response.error) {
+                        addMessage(`Error: ${response.error}`, 'chatstate-update');
+                    } else {
+                        addChatStateUpdate(response.jid, response.state);
+                    }
+                });
+                probeInput.value = '';
+            }
+        });
+
+        socket.on('socket-chat', (msg) => {
+            if (msg?.from === 'auco123@alumchat.lol/gajim.DDLA0X1D') {
+                addMessage(msg.message, 'received', msg.from);
+            }
+            
+            console.log('MSG', msg.message)
+        });
+
+        socket.on('presence-update', (data) => {
+            const { from, show, status } = data;
+            addPresenceUpdate(from, show, status);
+        });
+
+        socket.on('chatstate-update', (data) => {
+            const { from, jid, state } = data;
+            console.log(data)
+            addChatStateUpdate(from ,state);
         });
 
         function addMessage(message, type, from = 'You') {
@@ -115,6 +165,22 @@
             messages.appendChild(item);
             messages.scrollTop = messages.scrollHeight;
         }
-    </script>
+
+        function addPresenceUpdate(from, show, status) {
+            const item = document.createElement('li');
+            item.className = 'presence-update';
+            item.textContent = `${from} is ${show} with status "${status}"`;
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addChatStateUpdate(from, state) {
+            const item = document.createElement('li');
+            item.className = 'chatstate-update';
+            item.textContent = `${from} is currently ${state}`;
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        </script>
     </body>
 </html>
