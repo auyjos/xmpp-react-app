@@ -9,6 +9,9 @@ const xmpp = require('./xmpp_client'); // Asegúrate de que este archivo sea cor
 const socketIo = require('socket.io');
 const app = express();
 const PORT = 3000;
+const Message = require('./models/Message');
+const GroupChatMessage = require('./models/GroupChatMessage');
+
 
 const server = http.createServer(app);
 const io = new socketIo.Server(server, {
@@ -19,7 +22,23 @@ const io = new socketIo.Server(server, {
     },
 });
 
+require('dotenv').config(); // Cargar las variables de entorno desde el .env
 
+const mongoose = require('mongoose');
+
+// Conectar a MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+});
+
+mongoose.connection.on('connected', () => {
+    console.log('Connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.log('Error connecting to MongoDB:', err);
+});
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -444,6 +463,21 @@ xmpp.on('groupbuddy', function (conference, from, state, statusText) {
 
 xmpp.on('groupchat', function (conference, from, message) {
     console.log('%s says %s on %s', from, message, conference);
+    const newMessage = new GroupChatMessage({
+        from,
+        message,
+        conference
+    });
+
+    (async () => {
+        try {
+            await newMessage.save(); // Guardar en la base de datos
+            console.log('Message saved to database');
+        } catch (error) {
+            console.error('Error saving message:', error);
+        }
+    })();
+
     io.emit('socket-groupchat', { conference, from, message });
 });
 
@@ -483,6 +517,15 @@ app.post('/join-room', (req, res) => {
     }
 });
 
+app.get('/groupmessages/:conference', async (req, res) => {
+    try {
+        const conferenceName = req.params.conference; // Obtener el nombre de la conferencia desde los parámetros
+        const messages = await GroupChatMessage.find({ conference: conferenceName }).sort({ timestamp: 1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).send('Error fetching messages');
+    }
+});
 
 
 

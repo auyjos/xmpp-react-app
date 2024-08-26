@@ -5,6 +5,7 @@ import { ListGroup } from 'react-bootstrap';
 
 const GroupMessageList = ({ messages, userJid }) => {
     // Filtra los mensajes para excluir los del usuario actual
+    console.log(messages, userJid)
     const filteredMessages = messages.filter(msg => msg.from !== userJid);
 
     return (
@@ -26,7 +27,7 @@ const GroupMessageList = ({ messages, userJid }) => {
                         <div className="d-flex justify-content-between align-items-center">
                             <strong>{msg.from}</strong>
                         </div>
-                        <div>{msg.text}</div>
+                        <div>{msg?.text ?? msg?.message}</div>
                     </div>
                 </ListGroup.Item>
             ))}

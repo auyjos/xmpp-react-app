@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card } from 'react-bootstrap';
+import { Container, Card } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import { useChatContext } from '../ChatLogic/ChatProvider';
 import GroupMessageList from './GroupMessageList';
 import GroupMessageInput from './GroupMessageInput';
 import io from 'socket.io-client';
+import axios from 'axios';
 
-// En GroupChat.jsx
 const GroupChat = () => {
     const { room } = useParams();
     const [messages, setMessages] = useState([]);
@@ -22,6 +22,18 @@ const GroupChat = () => {
         // Unirse al room
         newSocket.emit('join-room', room);
 
+        // Cargar mensajes antiguos cuando se monta el componente
+        const fetchOldMessages = async () => {
+            try {
+                const response = await axios.get(`http://localhost:3000/groupmessages/${room}`);
+                setMessages(response.data);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        };
+
+        fetchOldMessages();
+
         newSocket.on('group-message', (message) => {
             setMessages(prevMessages => [...prevMessages, message]);
         });
@@ -32,9 +44,9 @@ const GroupChat = () => {
     }, [room]);
 
     const handleSendMessage = (messageText) => {
-        const newMessage = { text: messageText, from: jid, room }; 
+        const newMessage = { text: messageText, from: jid, room };
         setMessages([...messages, newMessage]);
-        socket.emit('send-group-message', { room, message: messageText, from: jid }); 
+        socket.emit('send-group-message', { room, message: messageText, from: jid });
     };
 
     return (
@@ -44,7 +56,7 @@ const GroupChat = () => {
                     <h5>{room}</h5>
                 </Card.Header>
                 <Card.Body className="d-flex flex-column overflow-auto p-3">
-                    <GroupMessageList messages={messages} />
+                    <GroupMessageList messages={messages} userJid={jid} />
                 </Card.Body>
                 <Card.Footer className="p-2">
                     <GroupMessageInput onSendMessage={handleSendMessage} />
@@ -55,4 +67,3 @@ const GroupChat = () => {
 };
 
 export default GroupChat;
-

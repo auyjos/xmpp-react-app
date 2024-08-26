@@ -16,7 +16,7 @@ const MessageList = ({ selectedJid }) => {
 
     useEffect(()=> {
         if (messages && selectedJid) {
-            console.log(messages)
+            console.log('---',messages)
             setFilteredMessages(
                 messages.filter(msg => extractUser(msg.from) === selectedJid || (msg?.to === selectedJid && msg.from === 'me')
             )
