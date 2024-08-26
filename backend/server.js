@@ -26,10 +26,6 @@ app.use(cors());
 app.options('*', cors());
 app.use(express.static('public'));
 
-const admin_user = {
-    "jid": "auy201579@alumchat.lol",
-    "password": "123"
-}
 
 
 
