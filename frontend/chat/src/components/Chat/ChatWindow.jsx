@@ -5,6 +5,9 @@ import MessageList from '../Messages/MessageList';
 import { useChatContext } from '../ChatLogic/ChatProvider';
 import FriendStatus from '../FriendList/FriendStatus';
 import MessageInput from '../Messages/MessageInput';
+import { getUserId } from '../../utils';
+
+const userId = getUserId()
 
 const ChatWindow = ({ jid, sendMessage }) => {
     const [messages, setMessages] = useState([]);
@@ -13,7 +16,7 @@ const ChatWindow = ({ jid, sendMessage }) => {
 
 
     const handleSendMessage = (messageText) => {
-        const newMessage = { text: messageText, from: 'me', to: jid };
+        const newMessage = { text: messageText, from: userId, to: jid };
         setMessages([...messages, newMessage]);
 
         // Enviar el mensaje usando la función del contexto

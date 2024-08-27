@@ -57,19 +57,17 @@ export const ChatProvider = ({ children }) => {
         };
     }, []);
 
-
-    
-
-    const sendMessage = (message) => {
+    const sendMessage = (data) => {
         const socket = socketRef.current;
-        console.log('----------!!!x`---',message.text)
+        console.log('----------!!!x`---',data)
         if (socket) {
-            socket.emit('socket-send', message.text);
+            socket.emit('socket-send', data);
             
-            setMessages([...messages, message]);
+            setMessages([...messages, data]);
 
         }
     };
+
     const value = {
         friends,
         messages,

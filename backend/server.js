@@ -9,8 +9,28 @@ const xmpp = require('./xmpp_client'); // Asegúrate de que este archivo sea cor
 const socketIo = require('socket.io');
 const app = express();
 const PORT = 3000;
-const Message = require('./models/Message');
+const ChatMessage = require('./models/ChatMessage');
 const GroupChatMessage = require('./models/GroupChatMessage');
+
+const extractUser = (userString = '') => {
+    return userString.split('/')[0];
+}
+
+
+const saveMessage = async ({ text, from, to }) => {
+    try {
+        const newMessage = new ChatMessage({
+            text,
+            from: extractUser(from),
+            to: extractUser(to) // Agregar destinatario al mensaje
+        });
+        await newMessage.save();
+        console.log('Message saved to database:', newMessage);
+    } catch (error) {
+        console.error('Error saving message to database:', error);
+    }
+}
+
 
 
 const server = http.createServer(app);
@@ -25,9 +45,12 @@ const io = new socketIo.Server(server, {
 require('dotenv').config(); // Cargar las variables de entorno desde el .env
 
 const mongoose = require('mongoose');
+const getMyself = () => {
+    xmpp?.conn?.options?.jid?.toString()
+}
 
 // Conectar a MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect('mongodb+srv://jose:123@bs2.phmixfa.mongodb.net/?retryWrites=true&w=majority&appName=BS2', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
@@ -46,14 +69,6 @@ app.options('*', cors());
 app.use(express.static('public'));
 
 
-
-
-const extractUsername = (jid) => {
-    const parts = jid.split('@');
-    return parts[0];
-};
-
-
 xmpp.on('error', err => {
     console.error(err);
 });
@@ -66,24 +81,17 @@ xmpp.on('presence', (from, show, status) => {
 
 
 io.on('connection', async (socket) => {
-    socket.on('socket-send', async (msg, clientOffset, callback) => {
-        console.log(`IO: chat: ${msg}:${clientOffset}:${callback}`)
-        xmpp.send('auco123@alumchat.lol', msg);
+    socket.on('socket-send', async (data) => {
+        const { from, text, to } = data
+        const from1 = getMyself()
+        console.log(`IO: chat: ${from}:${from1}:${text}:${to}`)
+
+        saveMessage({
+            text, from, to
+        })
+
+        xmpp.send(to, text);
     });
-
-    // socket.on('probe', (jid, callback) => {
-    //     xmpp.probe(jid, (err, state) => {
-    //         if (err) {
-    //             callback({ error: 'Failed to probe JID', details: err.message });
-    //             return;
-    //         }
-
-    //         // Enviar el estado a todos los clientes conectados
-    //         io.emit('chatstate-update', { jid, state });
-    //         callback({ jid, state });
-    //     });
-
-    // });
 
     socket.on('subscription-request', (from) => {
         // Emitir el evento de solicitud de amistad
@@ -151,13 +159,39 @@ io.on('connection', async (socket) => {
 });
 
 
+xmpp.on('chat', async (from, message) => {
+    const to = xmpp?.conn?.options?.jid?.toString()
+    console.log(`Message from ${from}: ${message}: to ${to}`);
 
-xmpp.on('chat', (from, message, test) => {
-    console.log(`Message from ${from}: ${message}: ${test}`);
+    // Suponiendo que 'to' está disponible en la lógica del evento de chat
 
-    io.emit('socket-chat', { from, message });
-    console.log('Event emitted: message', { from, message });
+
+    // Guardar el mensaje en la base de datos
+    saveMessage({
+        text: message, from, to
+    })
+
+    // Emitir el mensaje al frontend
+    io.emit('socket-chat', { from, message, to });
+    console.log('Event emitted: message', { from, message, to });
 });
+
+app.get('/messages', async (req, res) => {
+    const { from, to, message } = req.query;
+    console.log('getting messages from:', from, to, message)
+    try {
+        const messages = await ChatMessage.find({
+            $or: [
+                { from: from, to: to },
+                { from: to, to: from } // Mensajes de vuelta
+            ]
+        }).sort({ timestamp: 1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).send('Error fetching messages');
+    }
+});
+
 
 
 xmpp.on('buddy', function (jid, state, statusText, resource) {
@@ -238,7 +272,7 @@ const login = (jid, password, res) => {
 
     connectedUser = jid;
 
-
+    console.log('jid obtenido', getMyself())
 
 
 }
